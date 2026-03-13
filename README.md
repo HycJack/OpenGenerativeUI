@@ -2,7 +2,7 @@
 
 An open-source showcase for building rich, interactive AI-generated UI with [CopilotKit](https://copilotkit.ai) and [LangGraph](https://langchain-ai.github.io/langgraph/). Ask the agent to visualize algorithms, create 3D animations, render charts, or generate interactive diagrams — all rendered as live HTML/SVG inside a sandboxed iframe.
 
-https://github.com/user-attachments/assets/43b134e3-4aaa-455f-b015-31f1524ecb68
+https://github.com/user-attachments/assets/ed28c734-e54e-4412-873f-4801da544a7f
 
 ## What It Does
 
