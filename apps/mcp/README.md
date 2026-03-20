@@ -61,7 +61,41 @@ LOG_LEVEL=info
 
 ## Usage
 
-### From Claude Code
+### Claude Desktop (stdio)
+
+Claude Desktop uses stdio transport. Build first, then add to your `claude_desktop_config.json`:
+
+```bash
+pnpm build
+```
+
+```json
+{
+  "mcpServers": {
+    "open-generative-ui": {
+      "command": "node",
+      "args": ["dist/stdio.js"],
+      "cwd": "/absolute/path/to/apps/mcp"
+    }
+  }
+}
+```
+
+For development, you can use `tsx` directly:
+
+```json
+{
+  "mcpServers": {
+    "open-generative-ui": {
+      "command": "npx",
+      "args": ["tsx", "src/stdio.ts"],
+      "cwd": "/absolute/path/to/apps/mcp"
+    }
+  }
+}
+```
+
+### Claude Code (HTTP)
 
 Add to `.mcp.json`:
 
@@ -73,11 +107,12 @@ Add to `.mcp.json`:
 }
 ```
 
-Then use the available tools and resources in Claude conversations.
+Then start the HTTP server with `pnpm dev`.
 
-### From Any MCP Client
+### Any MCP Client
 
-Connect via HTTP MCP transport to `http://localhost:3100/mcp`.
+- **stdio**: Run `node dist/stdio.js` (or `pnpm start:stdio`)
+- **HTTP**: Connect to `http://localhost:3100/mcp` (start with `pnpm dev` or `pnpm start`)
 
 ## API Reference
 
@@ -224,8 +259,9 @@ apps/mcp/
 ├── Dockerfile           # Container definition
 ├── skills/              # Skill instruction files (copied from source)
 └── src/
-    ├── index.ts         # Hono HTTP server entry point
-    ├── server.ts        # MCP server construction
+    ├── index.ts         # HTTP server entry point (Hono)
+    ├── stdio.ts         # stdio transport entry point (Claude Desktop)
+    ├── server.ts        # MCP server construction (shared)
     ├── skills.ts        # Skill file loader
     └── renderer.ts      # Design system CSS + assembleDocument
 ```
