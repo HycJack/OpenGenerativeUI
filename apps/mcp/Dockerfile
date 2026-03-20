@@ -13,7 +13,7 @@ COPY package.json pnpm-lock.yaml ./
 RUN npm install -g pnpm@9
 
 # Install dependencies
-RUN pnpm install --prod --frozen-lockfile
+RUN pnpm install --frozen-lockfile
 
 # Copy source
 COPY tsconfig.json ./

@@ -8,7 +8,7 @@ const PORT = Number(process.env.MCP_PORT) || 3100;
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS?.split(",") || ["*"];
 
 const server = createMcpServer();
-const transport = new WebStandardStreamableHTTPServerTransport();
+const sessions = new Map<string, WebStandardStreamableHTTPServerTransport>();
 
 const app = new Hono();
 
@@ -31,8 +31,29 @@ app.use(
 );
 
 app.get("/health", (c) => c.json({ status: "ok" }));
-app.all("/mcp", (c) => transport.handleRequest(c.req.raw));
 
-await server.connect(transport);
+app.all("/mcp", async (c) => {
+  const sessionId = c.req.header("mcp-session-id");
+
+  if (sessionId && sessions.has(sessionId)) {
+    return sessions.get(sessionId)!.handleRequest(c.req.raw);
+  }
+
+  const transport = new WebStandardStreamableHTTPServerTransport();
+  await server.connect(transport);
+
+  const response = await transport.handleRequest(c.req.raw);
+
+  const newSessionId = response.headers.get("mcp-session-id");
+  if (newSessionId) {
+    sessions.set(newSessionId, transport);
+    transport.onclose = () => {
+      sessions.delete(newSessionId);
+    };
+  }
+
+  return response;
+});
+
 serve({ fetch: app.fetch, port: PORT });
-console.error(`MCP server running on http://localhost:${PORT}/mcp`);
+console.log(`MCP server running on http://localhost:${PORT}/mcp`);

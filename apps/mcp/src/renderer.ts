@@ -1,5 +1,6 @@
 // OpenGenerativeUI Design System CSS and Bridge JS
 // Forked from apps/app/src/components/generative-ui/widget-renderer.tsx
+// WARNING: Keep in sync with the source widget-renderer.tsx when the design system changes.
 
 const THEME_CSS = `
 :root {

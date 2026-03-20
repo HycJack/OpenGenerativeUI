@@ -14,5 +14,9 @@ export function listSkills(): string[] {
 }
 
 export function loadSkill(name: string): string {
-  return readFileSync(resolve(SKILLS_DIR, `${name}.txt`), "utf-8");
+  const resolved = resolve(SKILLS_DIR, `${name}.txt`);
+  if (!resolved.startsWith(resolve(SKILLS_DIR) + "/")) {
+    throw new Error(`Invalid skill name: ${name}`);
+  }
+  return readFileSync(resolved, "utf-8");
 }
