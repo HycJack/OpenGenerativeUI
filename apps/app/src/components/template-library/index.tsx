@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useAgent } from "@copilotkit/react-core/v2";
 import { TemplateCard } from "./template-card";
 
@@ -22,9 +23,37 @@ export function TemplateLibrary({ open, onClose, onSendPrompt }: TemplateLibrary
   const { agent } = useAgent();
   const templates: Template[] = agent.state?.templates || [];
 
-  const handleApply = (id: string, name: string) => {
-    onSendPrompt(`Apply the "${name}" template (id: ${id}) to my new data`);
+  // Apply flow: show input for new data before sending
+  const [applyingTemplate, setApplyingTemplate] = useState<Template | null>(null);
+  const [applyData, setApplyData] = useState("");
+
+  const handleApplyClick = (id: string) => {
+    const template = templates.find((t) => t.id === id);
+    if (template) {
+      setApplyingTemplate(template);
+      setApplyData("");
+    }
+  };
+
+  const handleApplyConfirm = () => {
+    if (!applyingTemplate) return;
+    const dataDesc = applyData.trim();
+    if (!dataDesc) return;
+
+    // Send the template HTML directly in the prompt so the agent doesn't
+    // need to look it up from state (frontend setState may not sync to backend)
+    onSendPrompt(
+      `Use this saved template called "${applyingTemplate.name}" as a base layout and adapt it for the following new data: ${dataDesc}\n\n` +
+      `Here is the template HTML to adapt:\n\n${applyingTemplate.html}`
+    );
+    setApplyingTemplate(null);
+    setApplyData("");
     onClose();
+  };
+
+  const handleApplyCancel = () => {
+    setApplyingTemplate(null);
+    setApplyData("");
   };
 
   const handleDelete = (id: string) => {
@@ -126,13 +155,79 @@ export function TemplateLibrary({ open, onClose, onSendPrompt }: TemplateLibrary
                   html={t.html}
                   dataDescription={t.data_description}
                   version={t.version}
-                  onApply={handleApply}
+                  onApply={handleApplyClick}
                   onDelete={handleDelete}
                 />
               ))}
             </div>
           )}
         </div>
+
+        {/* Apply data input — slides up from bottom of drawer */}
+        {applyingTemplate && (
+          <div
+            className="shrink-0 px-4 pb-4 pt-3"
+            style={{
+              borderTop: "1px solid var(--color-border-glass, rgba(0,0,0,0.1))",
+              animation: "tmpl-slideIn 0.2s ease-out",
+            }}
+          >
+            <p
+              className="text-xs font-semibold mb-1"
+              style={{ color: "var(--text-primary, #1a1a1a)" }}
+            >
+              Apply &quot;{applyingTemplate.name}&quot;
+            </p>
+            <p
+              className="text-[11px] mb-2"
+              style={{ color: "var(--text-tertiary, #999)" }}
+            >
+              Describe the new data you want to populate this template with:
+            </p>
+            <textarea
+              value={applyData}
+              onChange={(e) => setApplyData(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleApplyConfirm();
+                }
+                if (e.key === "Escape") handleApplyCancel();
+              }}
+              autoFocus
+              placeholder='e.g. "$2,400 web design project for Sarah Chen, due April 15"'
+              rows={2}
+              className="w-full text-xs px-3 py-2 rounded-lg outline-none resize-none"
+              style={{
+                background: "var(--color-background-secondary, #f5f5f5)",
+                color: "var(--text-primary, #1a1a1a)",
+                border: "1px solid var(--color-border-tertiary, rgba(0,0,0,0.1))",
+              }}
+            />
+            <div className="flex gap-2 mt-2">
+              <button
+                onClick={handleApplyConfirm}
+                disabled={!applyData.trim()}
+                className="flex-1 text-xs font-medium py-1.5 rounded-lg text-white transition-all duration-150 disabled:opacity-40"
+                style={{
+                  background: "linear-gradient(135deg, var(--color-lilac-dark, #6366f1), var(--color-mint-dark, #10b981))",
+                }}
+              >
+                Apply Template
+              </button>
+              <button
+                onClick={handleApplyCancel}
+                className="text-xs px-3 py-1.5 rounded-lg"
+                style={{
+                  border: "1px solid var(--color-border-tertiary, rgba(0,0,0,0.1))",
+                  color: "var(--text-secondary, #666)",
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

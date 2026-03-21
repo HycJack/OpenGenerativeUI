@@ -9,8 +9,8 @@ interface TemplateCardProps {
   html: string;
   dataDescription: string;
   version: number;
-  onApply: (id: string, name: string) => void;
-  onDelete: (id: string, name: string) => void;
+  onApply: (id: string) => void;
+  onDelete: (id: string) => void;
 }
 
 export function TemplateCard({
@@ -106,7 +106,7 @@ body { font-family: system-ui, sans-serif; font-size: 16px; color: #1a1a1a; back
         className="flex gap-2 p-3 pt-0"
       >
         <button
-          onClick={() => onApply(id, name)}
+          onClick={() => onApply(id)}
           className="flex-1 text-xs font-medium py-1.5 rounded-lg transition-all duration-150 hover:scale-[1.02] text-white"
           style={{
             background: "linear-gradient(135deg, var(--color-lilac-dark, #6366f1), var(--color-mint-dark, #10b981))",
@@ -115,7 +115,7 @@ body { font-family: system-ui, sans-serif; font-size: 16px; color: #1a1a1a; back
           Apply
         </button>
         <button
-          onClick={() => onDelete(id, name)}
+          onClick={() => onDelete(id)}
           className="text-xs px-3 py-1.5 rounded-lg transition-colors duration-150"
           style={{
             border: "1px solid var(--color-border-tertiary, rgba(0,0,0,0.1))",
