@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useCallback, type ReactNode } from "react";
+import { useState, useCallback, useMemo, useRef, type ReactNode } from "react";
 import { useAgent } from "@copilotkit/react-core/v2";
+import { SEED_TEMPLATES } from "@/components/template-library/seed-templates";
 
 type SaveState = "idle" | "input" | "saving" | "saved";
 
@@ -33,6 +34,37 @@ export function SaveTemplateOverlay({
   const { agent } = useAgent();
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [templateName, setTemplateName] = useState("");
+
+  // Capture pending_template at mount time — it may be cleared by the agent later
+  const pending = agent.state?.pending_template as { id: string; name: string } | null | undefined;
+  const sourceRef = useRef<{ id: string; name: string } | null>(null);
+  if (pending?.id && !sourceRef.current) {
+    sourceRef.current = pending;
+  }
+
+  // Check if this content matches an existing template:
+  // 1. Exact HTML match (seed templates rendered as-is)
+  // 2. Source template captured from pending_template (applied templates with modified data)
+  const matchedTemplate = useMemo(() => {
+    // First check source template from apply flow
+    if (sourceRef.current) {
+      const allTemplates = [
+        ...SEED_TEMPLATES,
+        ...((agent.state?.templates as { id: string; name: string }[]) || []),
+      ];
+      const source = allTemplates.find((t) => t.id === sourceRef.current!.id);
+      if (source) return source;
+    }
+    // Then check exact HTML match
+    if (!html) return null;
+    const normalise = (s: string) => s.replace(/\s+/g, " ").trim();
+    const norm = normalise(html);
+    const allTemplates = [
+      ...SEED_TEMPLATES,
+      ...((agent.state?.templates as { id: string; name: string; html: string }[]) || []),
+    ];
+    return allTemplates.find((t) => t.html && normalise(t.html) === norm) ?? null;
+  }, [html, agent.state?.templates]);
 
   const handleSave = useCallback(() => {
     const name = templateName.trim() || title || "Untitled Template";
@@ -161,8 +193,8 @@ export function SaveTemplateOverlay({
           </div>
         )}
 
-        {/* Idle bookmark button */}
-        {saveState === "idle" && (
+        {/* Idle: show save button (badge moved outside this container) */}
+        {saveState === "idle" && !matchedTemplate && (
           <button
             onClick={() => setSaveState("input")}
             className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium shadow-md transition-all duration-150 hover:scale-105"
@@ -180,6 +212,25 @@ export function SaveTemplateOverlay({
           </button>
         )}
       </div>
+
+      {/* Template name badge — shown above widget when matched */}
+      {saveState === "idle" && matchedTemplate && ready && (
+        <div className="flex justify-end mb-1">
+          <div
+            className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium"
+            style={{
+              background: "linear-gradient(135deg, rgba(99,102,241,0.10), rgba(16,185,129,0.10))",
+              border: "1px solid rgba(99,102,241,0.20)",
+              color: "var(--text-primary, #1a1a1a)",
+            }}
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.55 }}>
+              <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
+            </svg>
+            {matchedTemplate.name}
+          </div>
+        </div>
+      )}
 
       {children}
     </div>

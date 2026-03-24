@@ -84,14 +84,20 @@ def apply_template(name: str = "", template_id: str = "", runtime: ToolRuntime =
     Retrieve a saved template's HTML so you can adapt it with new data.
     After calling this, generate a NEW widget in the same style and render via widgetRenderer.
 
-    You can look up by name or ID. If both are provided, ID takes priority.
-    When multiple templates share the same name, returns the most recently created one.
+    This tool automatically checks for a pending_template in state (set by the
+    frontend when the user picks a template from the library). If pending_template
+    is present, it takes priority over name/template_id arguments.
 
     Args:
-        name: The name of the template to apply (e.g. "Invoice")
-        template_id: The ID of the template to apply (optional)
+        name: The name of the template to apply (fallback if no pending_template)
+        template_id: The ID of the template to apply (fallback if no pending_template)
     """
     templates = runtime.state.get("templates", [])
+
+    # Check pending_template from frontend first — this is the most reliable source
+    pending = runtime.state.get("pending_template")
+    if pending and pending.get("id"):
+        template_id = pending["id"]
 
     # Look up by ID first
     if template_id:

@@ -2,6 +2,7 @@
 
 import { useAgent } from "@copilotkit/react-core/v2";
 import { TemplateCard } from "./template-card";
+import { SEED_TEMPLATES } from "./seed-templates";
 
 interface TemplateLibraryProps {
   open: boolean;
@@ -21,15 +22,25 @@ interface Template {
 
 export function TemplateLibrary({ open, onClose }: TemplateLibraryProps) {
   const { agent } = useAgent();
-  const templates: Template[] = agent.state?.templates || [];
+  const agentTemplates: Template[] = agent.state?.templates || [];
+  // Merge seed templates with user-saved ones
+  const templates: Template[] = [
+    ...SEED_TEMPLATES.filter((s) => !agentTemplates.some((t) => t.id === s.id)),
+    ...agentTemplates,
+  ];
 
   const handleApplyClick = (id: string) => {
     const template = templates.find((t) => t.id === id);
     if (!template) return;
 
-    // Attach template as a chip in the chat input — user types their prompt naturally
+    // Ensure template is in agent state so the backend can retrieve it via apply_template
+    const stateTemplates = agentTemplates.some((t) => t.id === id)
+      ? agentTemplates
+      : [...agentTemplates, template];
+
     agent.setState({
       ...agent.state,
+      templates: stateTemplates,
       pending_template: { id: template.id, name: template.name },
     });
     onClose();

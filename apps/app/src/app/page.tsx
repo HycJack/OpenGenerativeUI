@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { ExampleLayout } from "@/components/example-layout";
 import { useGenerativeUIExamples, useExampleSuggestions } from "@/hooks";
-import { useSeedTemplates } from "@/hooks/use-seed-templates";
 import { ExplainerCardsPortal } from "@/components/explainer-cards";
 import { TemplateLibrary } from "@/components/template-library";
 import { TemplateChip } from "@/components/template-library/template-chip";
@@ -13,7 +12,6 @@ import { CopilotChat } from "@copilotkit/react-core/v2";
 export default function HomePage() {
   useGenerativeUIExamples();
   useExampleSuggestions();
-  useSeedTemplates();
 
   const [templateDrawerOpen, setTemplateDrawerOpen] = useState(false);
 
