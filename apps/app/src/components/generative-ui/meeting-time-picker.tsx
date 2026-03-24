@@ -46,12 +46,6 @@ export function MeetingTimePicker({
 
   return (
     <div className="rounded-2xl shadow-lg max-w-md w-full border dark:border-zinc-700 mx-auto mb-6 bg-white dark:bg-zinc-800">
-      <style>{`
-        @keyframes fadeSlideUp {
-          from { opacity: 0; transform: translateY(12px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
       <div className="backdrop-blur-md p-8 w-full rounded-2xl">
         {/* Show confirmation or prompt */}
         {selectedSlot ? (
