@@ -6,6 +6,29 @@ import {
 import { LangGraphAgent } from "@copilotkit/runtime/langgraph";
 import { NextRequest } from "next/server";
 
+// Simple sliding-window rate limiter (per IP)
+const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
+const RATE_LIMIT_MAX = 20;           // max requests per window
+const hits = new Map<string, number[]>();
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const timestamps = hits.get(ip)?.filter(t => t > now - RATE_LIMIT_WINDOW_MS) ?? [];
+  timestamps.push(now);
+  hits.set(ip, timestamps);
+  return timestamps.length > RATE_LIMIT_MAX;
+}
+
+// Prune stale entries every 5 min to prevent unbounded memory growth
+setInterval(() => {
+  const cutoff = Date.now() - RATE_LIMIT_WINDOW_MS;
+  hits.forEach((timestamps, ip) => {
+    const recent = timestamps.filter(t => t > cutoff);
+    if (recent.length === 0) hits.delete(ip);
+    else hits.set(ip, recent);
+  });
+}, 300_000);
+
 // Normalize Render's fromService hostport (bare host:port) into a full URL
 const raw = process.env.LANGGRAPH_DEPLOYMENT_URL;
 const deploymentUrl = !raw
@@ -23,6 +46,11 @@ const defaultAgent = new LangGraphAgent({
 
 // 3. Define the route and CopilotRuntime for the agent
 export const POST = async (req: NextRequest) => {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  if (isRateLimited(ip)) {
+    return new Response("Too many requests", { status: 429 });
+  }
+
   const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
     endpoint: "/api/copilotkit",
     serviceAdapter: new ExperimentalEmptyAdapter(),
