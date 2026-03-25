@@ -430,7 +430,7 @@ window.addEventListener('message', function(e) {
             newScript.textContent = scriptInfo.text;
           }
           content.appendChild(newScript);
-        } catch(e) {}
+        } catch(e) { console.warn('[widget] script exec failed:', e); }
       });
     }
     reportHeight();
