@@ -5,19 +5,21 @@ import { ExampleLayout } from "@/components/example-layout";
 import { useGenerativeUIExamples, useExampleSuggestions } from "@/hooks";
 import { ExplainerCardsPortal } from "@/components/explainer-cards";
 import { DemoGallery, type DemoItem } from "@/components/demo-gallery";
-import { CopilotChat } from "@copilotkit/react-core/v2";
-import { useCopilotChatInternal } from "@copilotkit/react-core";
+import { GridIcon } from "@/components/demo-gallery/grid-icon";
+import { CopilotChat, useAgent, useCopilotKit } from "@copilotkit/react-core/v2";
 
 export default function HomePage() {
   useGenerativeUIExamples();
   useExampleSuggestions();
 
   const [demoDrawerOpen, setDemoDrawerOpen] = useState(false);
-  const { sendMessage } = useCopilotChatInternal();
+  const { agent } = useAgent();
+  const { copilotkit } = useCopilotKit();
 
   const handleTryDemo = (demo: DemoItem) => {
     setDemoDrawerOpen(false);
-    sendMessage({ id: crypto.randomUUID(), content: demo.prompt, role: "user" });
+    agent.addMessage({ id: crypto.randomUUID(), content: demo.prompt, role: "user" });
+    copilotkit.runAgent({ agent });
   };
 
   // Widget bridge: handle messages from widget iframes
@@ -76,12 +78,7 @@ export default function HomePage() {
                   }}
                   title="Open Demo Gallery"
                 >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect width="7" height="7" x="3" y="3" rx="1" />
-                    <rect width="7" height="7" x="14" y="3" rx="1" />
-                    <rect width="7" height="7" x="14" y="14" rx="1" />
-                    <rect width="7" height="7" x="3" y="14" rx="1" />
-                  </svg>
+                  <GridIcon size={15} />
                   Demos
                 </button>
                 <a

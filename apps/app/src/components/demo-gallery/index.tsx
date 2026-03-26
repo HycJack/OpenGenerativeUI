@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DEMO_EXAMPLES, type DemoCategory, type DemoItem } from "./demo-data";
 import { DemoCard } from "./demo-card";
 import { CategoryFilter } from "./category-filter";
+import { GridIcon } from "./grid-icon";
 
 export type { DemoItem } from "./demo-data";
 
@@ -20,6 +21,15 @@ export function DemoGallery({ open, onClose, onTryDemo }: DemoGalleryProps) {
   const filtered = selectedCategory
     ? DEMO_EXAMPLES.filter((d) => d.category === selectedCategory)
     : DEMO_EXAMPLES;
+
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open, onClose]);
 
   return (
     <>
@@ -53,22 +63,7 @@ export function DemoGallery({ open, onClose, onTryDemo }: DemoGalleryProps) {
           }}
         >
           <div className="flex items-center gap-2">
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              style={{ color: "var(--text-secondary, #666)" }}
-            >
-              <rect width="7" height="7" x="3" y="3" rx="1" />
-              <rect width="7" height="7" x="14" y="3" rx="1" />
-              <rect width="7" height="7" x="14" y="14" rx="1" />
-              <rect width="7" height="7" x="3" y="14" rx="1" />
-            </svg>
+            <GridIcon size={18} style={{ color: "var(--text-secondary, #666)" }} />
             <h2
               className="text-base font-semibold"
               style={{ color: "var(--text-primary, #1a1a1a)" }}
