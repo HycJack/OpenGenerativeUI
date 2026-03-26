@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { z } from "zod";
-import { SaveTemplateOverlay } from "./save-template-overlay";
+import { ExportOverlay } from "./export-overlay";
 import { IDIOMORPH_JS } from "./idiomorph-inline";
 
 // ─── Zod Schema (CopilotKit parameter contract) ─────────────────────
@@ -455,10 +455,18 @@ window.addEventListener('message', function(e) {
   }
 });
 
-// Auto-resize: report content height to host
+// Auto-resize: report content height to host.
+// Clone the content off-screen so viewport-relative children (100vh, 100%)
+// don't inflate the reading and we never mutate the visible DOM (which would
+// re-trigger ResizeObserver and risk an infinite loop).
 function reportHeight() {
   var content = document.getElementById('content');
-  var h = content ? content.offsetHeight : document.documentElement.scrollHeight;
+  if (!content) return;
+  var clone = content.cloneNode(true);
+  clone.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:' + content.offsetWidth + 'px;height:auto;overflow:hidden;visibility:hidden;pointer-events:none;';
+  document.body.appendChild(clone);
+  var h = clone.scrollHeight;
+  document.body.removeChild(clone);
   window.parent.postMessage({ type: 'widget-resize', height: h }, '*');
 }
 var ro = new ResizeObserver(reportHeight);
@@ -550,7 +558,7 @@ function useLoadingPhrase(active: boolean) {
 
 // ─── React Component ─────────────────────────────────────────────────
 
-export function WidgetRenderer({ title, description, html }: WidgetRendererProps) {
+export function WidgetRenderer({ title, html }: WidgetRendererProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [height, setHeight] = useState(0);
   const [loaded, setLoaded] = useState(false);
@@ -573,7 +581,7 @@ export function WidgetRenderer({ title, description, html }: WidgetRendererProps
       e.data?.type === "widget-resize" &&
       typeof e.data.height === "number"
     ) {
-      setHeight(Math.max(50, Math.min(e.data.height + 8, 4000)));
+      setHeight(Math.max(50, Math.min(e.data.height, 4000)));
     }
   }, []);
 
@@ -689,9 +697,8 @@ export function WidgetRenderer({ title, description, html }: WidgetRendererProps
         </div>
       )}
 
-      <SaveTemplateOverlay
+      <ExportOverlay
         title={title}
-        description={description}
         html={html}
         componentType="widgetRenderer"
         ready={!!html && htmlSettled}
@@ -716,7 +723,7 @@ export function WidgetRenderer({ title, description, html }: WidgetRendererProps
           }}
           title={title}
         />
-      </SaveTemplateOverlay>
+      </ExportOverlay>
     </div>
   );
 }
