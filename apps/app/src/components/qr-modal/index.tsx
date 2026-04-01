@@ -7,28 +7,30 @@ import { QRCodeSVG } from "qrcode.react";
 /*  Hook: resolves the pick URL (uses LAN IP on localhost for phones)  */
 /* ------------------------------------------------------------------ */
 function usePickUrl(sessionId: string) {
-  const [url, setUrl] = useState("");
+  const isLocalhost =
+    typeof window !== "undefined" &&
+    (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+
+  const fallbackUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/pick?session=${sessionId}`
+      : "";
+
+  const [url, setUrl] = useState(() => (isLocalhost ? "" : fallbackUrl));
 
   useEffect(() => {
-    const origin = window.location.origin;
-    if (
-      window.location.hostname === "localhost" ||
-      window.location.hostname === "127.0.0.1"
-    ) {
-      fetch("/api/pick/ip")
-        .then((r) => r.json())
-        .then((data) => {
-          if (data.ip) {
-            setUrl(`http://${data.ip}:${window.location.port}/pick?session=${sessionId}`);
-          } else {
-            setUrl(`${origin}/pick?session=${sessionId}`);
-          }
-        })
-        .catch(() => setUrl(`${origin}/pick?session=${sessionId}`));
-    } else {
-      setUrl(`${origin}/pick?session=${sessionId}`);
-    }
-  }, [sessionId]);
+    if (!isLocalhost) return;
+    fetch("/api/pick/ip")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.ip) {
+          setUrl(`http://${data.ip}:${window.location.port}/pick?session=${sessionId}`);
+        } else {
+          setUrl(fallbackUrl);
+        }
+      })
+      .catch(() => setUrl(fallbackUrl));
+  }, [sessionId, isLocalhost, fallbackUrl]);
 
   return url;
 }

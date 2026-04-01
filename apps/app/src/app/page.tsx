@@ -24,8 +24,8 @@ export default function HomePage() {
   // Ref to always have the latest agent/copilotkit for async callbacks
   const agentRef = useRef(agent);
   const copilotkitRef = useRef(copilotkit);
-  agentRef.current = agent;
-  copilotkitRef.current = copilotkit;
+  useEffect(() => { agentRef.current = agent; }, [agent]);
+  useEffect(() => { copilotkitRef.current = copilotkit; }, [copilotkit]);
 
   const sendPrompt = useCallback((prompt: string) => {
     const a = agentRef.current;
@@ -39,10 +39,10 @@ export default function HomePage() {
     sendPrompt(demo.prompt);
   };
 
-  // Reset scan status when QR modal opens
-  useEffect(() => {
-    if (qrOpen) setScanStatus("waiting");
-  }, [qrOpen]);
+  const openQrModal = () => {
+    setScanStatus("waiting");
+    setQrOpen(true);
+  };
 
   // Poll for QR pick status
   useEffect(() => {
@@ -116,7 +116,7 @@ export default function HomePage() {
                 </p>
               </div>
               <div className="flex items-center gap-1.5 sm:gap-2">
-                <QrButton onClick={() => setQrOpen(true)} />
+                <QrButton onClick={openQrModal} />
                 <button
                   onClick={() => setDemoDrawerOpen(true)}
                   className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium no-underline whitespace-nowrap transition-all duration-150 hover:-translate-y-px cursor-pointer"
