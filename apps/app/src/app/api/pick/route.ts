@@ -9,6 +9,13 @@ export async function GET(req: NextRequest) {
   const session = getSession(sessionId);
   if (!session) return NextResponse.json({ status: "waiting" });
 
+  // Consume the prompt on first read so duplicate polls don't re-trigger
+  if (session.status === "picked" && session.prompt) {
+    const prompt = session.prompt;
+    setSession(sessionId, { status: "picked" });
+    return NextResponse.json({ status: "picked", prompt });
+  }
+
   return NextResponse.json(session);
 }
 
