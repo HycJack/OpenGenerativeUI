@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ExampleLayout } from "@/components/example-layout";
 import { useGenerativeUIExamples, useExampleSuggestions } from "@/hooks";
 import { ExplainerCardsPortal } from "@/components/explainer-cards";
@@ -21,10 +21,22 @@ export default function HomePage() {
   const { agent } = useAgent();
   const { copilotkit } = useCopilotKit();
 
+  // Ref to always have the latest agent/copilotkit for async callbacks
+  const agentRef = useRef(agent);
+  const copilotkitRef = useRef(copilotkit);
+  agentRef.current = agent;
+  copilotkitRef.current = copilotkit;
+
+  const sendPrompt = useCallback((prompt: string) => {
+    const a = agentRef.current;
+    const ck = copilotkitRef.current;
+    a.addMessage({ id: crypto.randomUUID(), content: prompt, role: "user" });
+    ck.runAgent({ agent: a });
+  }, []);
+
   const handleTryDemo = (demo: DemoItem) => {
     setDemoDrawerOpen(false);
-    agent.addMessage({ id: crypto.randomUUID(), content: demo.prompt, role: "user" });
-    copilotkit.runAgent({ agent });
+    sendPrompt(demo.prompt);
   };
 
   // Reset scan status when QR modal opens
@@ -35,18 +47,21 @@ export default function HomePage() {
   // Poll for QR pick status
   useEffect(() => {
     if (!qrOpen) return;
+    let picked = false;
     const interval = setInterval(async () => {
+      if (picked) return;
       try {
         const res = await fetch(`/api/pick?sessionId=${qrSessionId}`);
         const data = await res.json();
         if (data.status === "scanned") {
           setScanStatus("scanned");
         } else if (data.status === "picked" && data.prompt) {
+          picked = true;
           setScanStatus("picked");
+          clearInterval(interval);
           setTimeout(() => {
             setQrOpen(false);
-            agent.addMessage({ id: crypto.randomUUID(), content: data.prompt, role: "user" });
-            copilotkit.runAgent({ agent });
+            sendPrompt(data.prompt);
           }, 800);
         }
       } catch {
@@ -54,7 +69,7 @@ export default function HomePage() {
       }
     }, 2000);
     return () => clearInterval(interval);
-  }, [qrOpen, qrSessionId, agent, copilotkit]);
+  }, [qrOpen, qrSessionId, sendPrompt]);
 
   // Widget bridge: handle messages from widget iframes
   useEffect(() => {
