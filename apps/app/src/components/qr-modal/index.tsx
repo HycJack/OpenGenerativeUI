@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 
 /* ------------------------------------------------------------------ */
@@ -11,28 +11,24 @@ function usePickUrl(sessionId: string) {
     typeof window !== "undefined" &&
     (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
 
-  const fallbackUrl =
-    typeof window !== "undefined"
-      ? `${window.location.origin}/pick?session=${sessionId}`
-      : "";
-
-  const [url, setUrl] = useState(() => (isLocalhost ? "" : fallbackUrl));
+  // LAN IP resolved once (only used on localhost)
+  const [lanIp, setLanIp] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isLocalhost) return;
     fetch("/api/pick/ip")
       .then((r) => r.json())
-      .then((data) => {
-        if (data.ip) {
-          setUrl(`http://${data.ip}:${window.location.port}/pick?session=${sessionId}`);
-        } else {
-          setUrl(fallbackUrl);
-        }
-      })
-      .catch(() => setUrl(fallbackUrl));
-  }, [sessionId, isLocalhost, fallbackUrl]);
+      .then((data) => { if (data.ip) setLanIp(data.ip); })
+      .catch(() => {});
+  }, [isLocalhost]);
 
-  return url;
+  return useMemo(() => {
+    if (!sessionId || typeof window === "undefined") return "";
+    if (isLocalhost && lanIp) {
+      return `http://${lanIp}:${window.location.port}/pick?session=${sessionId}`;
+    }
+    return `${window.location.origin}/pick?session=${sessionId}`;
+  }, [sessionId, isLocalhost, lanIp]);
 }
 
 /* ------------------------------------------------------------------ */
