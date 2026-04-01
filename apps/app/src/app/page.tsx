@@ -16,7 +16,7 @@ export default function HomePage() {
 
   const [demoDrawerOpen, setDemoDrawerOpen] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
-  const [qrSessionId] = useState(() => typeof crypto !== "undefined" ? crypto.randomUUID().slice(0, 12) : "fallback");
+  const [qrSessionId, setQrSessionId] = useState("");
   const [scanStatus, setScanStatus] = useState<"waiting" | "scanned" | "picked">("waiting");
   const { agent } = useAgent();
   const { copilotkit } = useCopilotKit();
@@ -26,6 +26,9 @@ export default function HomePage() {
   const copilotkitRef = useRef(copilotkit);
   useEffect(() => { agentRef.current = agent; }, [agent]);
   useEffect(() => { copilotkitRef.current = copilotkit; }, [copilotkit]);
+
+  // Guard: prevent duplicate prompt dispatch across re-renders
+  const pickedRef = useRef(false);
 
   const sendPrompt = useCallback((prompt: string) => {
     const a = agentRef.current;
@@ -40,25 +43,26 @@ export default function HomePage() {
   };
 
   const openQrModal = () => {
+    pickedRef.current = false;
     setScanStatus("waiting");
+    setQrSessionId(crypto.randomUUID().slice(0, 12));
     setQrOpen(true);
   };
 
   // Poll for QR pick status
   useEffect(() => {
-    if (!qrOpen) return;
-    let picked = false;
+    if (!qrOpen || !qrSessionId) return;
     const interval = setInterval(async () => {
-      if (picked) return;
+      if (pickedRef.current) return;
       try {
         const res = await fetch(`/api/pick?sessionId=${qrSessionId}`);
         const data = await res.json();
         if (data.status === "scanned") {
           setScanStatus("scanned");
-        } else if (data.status === "picked" && data.prompt) {
-          picked = true;
-          setScanStatus("picked");
+        } else if (data.status === "picked" && data.prompt && !pickedRef.current) {
+          pickedRef.current = true;
           clearInterval(interval);
+          setScanStatus("picked");
           setTimeout(() => {
             setQrOpen(false);
             sendPrompt(data.prompt);
