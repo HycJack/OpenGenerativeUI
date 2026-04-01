@@ -7,6 +7,7 @@ import { ExplainerCardsPortal } from "@/components/explainer-cards";
 import { DemoGallery, type DemoItem } from "@/components/demo-gallery";
 import { GridIcon } from "@/components/demo-gallery/grid-icon";
 import { DesktopTipModal } from "@/components/desktop-tip-modal";
+import { QrButton, QrModal } from "@/components/qr-modal";
 import { CopilotChat, useAgent, useCopilotKit } from "@copilotkit/react-core/v2";
 
 export default function HomePage() {
@@ -14,6 +15,9 @@ export default function HomePage() {
   useExampleSuggestions();
 
   const [demoDrawerOpen, setDemoDrawerOpen] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [qrSessionId] = useState(() => typeof crypto !== "undefined" ? crypto.randomUUID().slice(0, 12) : "fallback");
+  const [scanStatus, setScanStatus] = useState<"waiting" | "scanned" | "picked">("waiting");
   const { agent } = useAgent();
   const { copilotkit } = useCopilotKit();
 
@@ -22,6 +26,35 @@ export default function HomePage() {
     agent.addMessage({ id: crypto.randomUUID(), content: demo.prompt, role: "user" });
     copilotkit.runAgent({ agent });
   };
+
+  // Reset scan status when QR modal opens
+  useEffect(() => {
+    if (qrOpen) setScanStatus("waiting");
+  }, [qrOpen]);
+
+  // Poll for QR pick status
+  useEffect(() => {
+    if (!qrOpen) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/pick?sessionId=${qrSessionId}`);
+        const data = await res.json();
+        if (data.status === "scanned") {
+          setScanStatus("scanned");
+        } else if (data.status === "picked" && data.prompt) {
+          setScanStatus("picked");
+          setTimeout(() => {
+            setQrOpen(false);
+            agent.addMessage({ id: crypto.randomUUID(), content: data.prompt, role: "user" });
+            copilotkit.runAgent({ agent });
+          }, 800);
+        }
+      } catch {
+        // ignore polling errors
+      }
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [qrOpen, qrSessionId, agent, copilotkit]);
 
   // Widget bridge: handle messages from widget iframes
   useEffect(() => {
@@ -68,6 +101,7 @@ export default function HomePage() {
                 </p>
               </div>
               <div className="flex items-center gap-1.5 sm:gap-2">
+                <QrButton onClick={() => setQrOpen(true)} />
                 <button
                   onClick={() => setDemoDrawerOpen(true)}
                   className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium no-underline whitespace-nowrap transition-all duration-150 hover:-translate-y-px cursor-pointer"
@@ -118,6 +152,13 @@ export default function HomePage() {
       />
 
       <DesktopTipModal />
+
+      <QrModal
+        isOpen={qrOpen}
+        onClose={() => setQrOpen(false)}
+        sessionId={qrSessionId}
+        scanStatus={scanStatus}
+      />
     </>
   );
 }
